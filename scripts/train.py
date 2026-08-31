@@ -128,6 +128,23 @@ def main():
     # 9. Verify if weights changed & loss is valid
     if weights_changed and not nan_occurred and avg_loss > 0:
          print("\n>>> PIPELINE INTEGRATION SANITY CHECK: PASSED! <<<")
+         
+         # Save checkpoint
+         checkpoint_dir = os.path.join(project_root, "results", "checkpoints")
+         os.makedirs(checkpoint_dir, exist_ok=True)
+         checkpoint_path = os.path.join(checkpoint_dir, "sasrec_movielens.pt")
+         
+         checkpoint = {
+             "model_state_dict": model.state_dict(),
+             "item_count": item_count,
+             "maxlen": maxlen,
+             "hidden_units": hidden_units,
+             "num_blocks": num_blocks,
+             "num_heads": num_heads,
+             "dropout_rate": dropout_rate
+         }
+         torch.save(checkpoint, checkpoint_path)
+         print(f"Saved checkpoint to: {checkpoint_path}")
     else:
          print("\n>>> PIPELINE INTEGRATION SANITY CHECK: FAILED! <<<")
     print("====================================================")
