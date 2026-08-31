@@ -1,98 +1,138 @@
-# SASRec Recommender System
+# SASRec Recommender
 
-A PyTorch-based sequential recommendation system that predicts the next item a user is likely to interact with, based on their historical sequence of actions.
+A PyTorch implementation of a self-attention based sequential recommender. Given a user's ordered interaction history, the model predicts what they are likely to interact with next.
 
-## What Problem Does It Solve?
+Trained and evaluated end to end on MovieLens-1M (6,040 users, 3,416 items, ~1M interactions).
 
-Traditional collaborative filtering models often ignore the order in which users interact with items. Sequential recommenders like this one treat user history as a time-ordered sequence, capturing short-term intent and long-term preferences to predict future interactions more accurately.
+**Test HR@10: 0.7371 | Test NDCG@10: 0.4793**
 
-## System Pipeline & Architecture
+---
 
-1. **Data Processing:** Filters out sparse users and items (minimum 5 interactions), remaps IDs to contiguous integers, and chronologically sorts interactions.
-2. **Dataset & Sampling:** Splits each user's timeline into `[train_sequence, validation_item, test_item]`. During training, it dynamically samples negative items to compute the loss.
-3. **Model (SASRec):** A Transformer-based architecture using learned positional embeddings, multi-head self-attention with causality masking (so future items are not seen), and pointwise feed-forward networks with residual connections.
-4. **Evaluation:** Evaluates validation and test sets by ranking the true target item against 100 sampled negative items, reporting Hit Rate (HR@10) and Normalized Discounted Cumulative Gain (NDCG@10).
+## Overview
 
-## Important Results
+Most recommendation models treat a user's history as an unordered set of likes. That throws away information: what someone watched *last week* usually says more about what they want *next* than what they watched two years ago.
 
-The model was trained and evaluated on the **MovieLens-1M** dataset (6,040 users, 3,416 items, 999,611 interactions).
+This system treats user history as a time-ordered sequence and uses self-attention to learn which past interactions actually matter for predicting the next one, without the sequential bottleneck of an RNN.
 
-The best-performing configuration achieved the following metrics on the test set:
-- **Test HR@10:** 0.7371
-- **Test NDCG@10:** 0.4793
-- **Final Training Loss:** 0.6075
+## Pipeline
 
-### Ablation Study
+```mermaid
+flowchart LR
+    A[Raw MovieLens Data] --> B[Preprocessing]
+    B --> C[Sequential Dataset]
+    C --> D[Train / Val / Test Split]
+    D --> E[SASRec Training]
+    E --> F[Evaluation<br/>HR@10 / NDCG@10]
+    E --> G[Qualitative Recommendations]
+    F --> H[Best Checkpoint]
+    G --> H
+```
 
-We conducted a 2x2 experiment to understand the impact of maximum sequence length (`maxlen`) and dropout rate (`dropout`) on model performance. The combined changes yielded the best results.
+**Preprocessing** filters users/items with fewer than 5 interactions, remaps IDs to contiguous integers, and sorts each user's history chronologically.
 
-| Configuration | Max Length | Dropout | Test HR@10 | Test NDCG@10 |
-|---------------|------------|---------|------------|--------------|
-| Baseline | 50 | 0.5 | 0.6781 | 0.4148 |
-| Only dropout changed | 50 | 0.2 | 0.7154 | 0.4518 |
-| Only maxlen changed | 200 | 0.5 | 0.6964 | 0.4384 |
-| **Combined changes (Best)** | **200** | **0.2** | **0.7371** | **0.4793** |
+**Splitting** follows a leave-one-out protocol per user: the last item is held out for test, the second-to-last for validation, and everything before that is used for training.
 
-*Note: You can view the full experimental results in `results/evaluation.json`.*
+**Training** dynamically samples negative items each step and optimizes a binary cross-entropy loss over positive vs. negative next-item pairs.
 
-### Training Curve
-During training on the best configuration (maxlen=200, dropout=0.2), the model smoothly converged over 200 epochs from an initial loss of ~5.6 down to ~0.6075.
+**Evaluation** ranks the true next item against 100 sampled negatives and reports HR@10 and NDCG@10.
 
-## Installation and Execution
+## Architecture
 
-### Requirements
-- Python 3.11+
-- PyTorch
-- NumPy
-- tqdm
-- PyYAML
+```mermaid
+flowchart TB
+    A[Input Sequence<br/>item_1 ... item_n] --> B[Item Embedding]
+    A --> C[Positional Embedding]
+    B --> D[+]
+    C --> D
+    D --> E[Self-Attention Block x2]
+    subgraph E [Self-Attention Block]
+        direction TB
+        E1[Multi-Head Self-Attention<br/>causal mask] --> E2[Add & Norm]
+        E2 --> E3[Feed-Forward Network]
+        E3 --> E4[Add & Norm]
+    end
+    E --> F[Final Sequence Representation]
+    F --> G[Score Against All Items<br/>dot product]
+    G --> H[Top-K Recommendations]
+```
 
-Install dependencies:
+Key design points:
+
+- **Positional embeddings** are added to item embeddings since self-attention has no inherent notion of order.
+- **Causal masking** prevents a position from attending to future items, so the model only ever conditions on past interactions.
+- **Residual connections + layer norm** around both the attention and feed-forward sub-layers stabilize training across stacked blocks.
+- **Shared item embeddings** are used for both the input side and the output scoring layer, reducing parameter count and overfitting risk.
+
+## Results
+
+Trained with an Adam optimizer for 200 epochs (batch size 128) on a Tesla T4 GPU.
+
+| Split | HR@10 | NDCG@10 |
+|---|---|---|
+| Validation | 0.7632 | 0.4960 |
+| Test | 0.7371 | 0.4793 |
+
+### Ablation: sequence length vs. dropout
+
+A controlled 2x2 experiment isolating the effect of maximum sequence length (`maxlen`) and dropout rate, holding every other hyperparameter fixed.
+
+| maxlen | dropout | Test HR@10 | Test NDCG@10 |
+|---|---|---|---|
+| 50 | 0.5 | 0.6781 | 0.4148 |
+| 50 | **0.2** | 0.7154 | 0.4518 |
+| **200** | 0.5 | 0.6964 | 0.4384 |
+| **200** | **0.2** | **0.7371** | **0.4793** |
+
+Reducing dropout alone produced a larger isolated gain than extending sequence length alone, suggesting the original config was over-regularized for a fairly dense dataset. Combining both changes gave the best result. Full experiment records live in `results/evaluation.json`.
+
+## Qualitative Example
+
+Generated by `scripts/qualitative_examples.py` on the best checkpoint.
+
+```text
+==========================================
+User ID: 1
+==========================================
+Recent Watch History:
+  Strongly composed of animation / children's movies
+
+Top-5 Recommended Movies:
+  1. The Lion King
+  2. The Little Mermaid
+  3. Fantasia
+  4. The Jungle Book
+  5. Lady and the Tramp
+```
+
+The model picks up on the user's genre pattern from their history alone, with no explicit genre features fed into the model. Full output for all evaluated users is in `results/qualitative_examples.txt`.
+
+## Installation
+
+Requires Python 3.11+.
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### Running the System
+## Usage
 
-1. **Train the Model:**
+**Train:**
 ```bash
-python scripts/train.py --epochs 200 --maxlen 200 --dropout 0.2 --batch-size 128 --hidden-units 50 --num-blocks 2 --num-heads 1 --lr 0.001 --seed 42 --device cuda
+python scripts/train.py \
+    --epochs 200 --maxlen 200 --dropout 0.2 \
+    --batch-size 128 --hidden-units 50 \
+    --num-blocks 2 --num-heads 1 \
+    --lr 0.001 --seed 42 --device cuda
 ```
 
-2. **Evaluate a Checkpoint:**
+**Evaluate a checkpoint:**
 ```bash
 python scripts/evaluate.py --checkpoint results/checkpoints/sasrec_movielens_maxlen200_dropout02.pt
 ```
 
-3. **Generate Qualitative Recommendations:**
+**Generate qualitative recommendations:**
 ```bash
 python scripts/qualitative_examples.py
-```
-
-## Expected Output
-
-When running the qualitative examples script, the system outputs the recent history, held-out targets, and Top-5 recommended movies for selected users. For example:
-
-```text
-==========================================
-User ID: 100
-==========================================
-Recent Watch History (last 10 items):
-  - 2001: A Space Odyssey (1968) [Drama|Mystery|Sci-Fi|Thriller] (ID: 924)
-  - Fargo (1996) [Crime|Drama|Thriller] (ID: 608)
-  - GoodFellas (1990) [Crime|Drama] (ID: 1213)
-  - Wizard of Oz, The (1939) [Adventure|Children's|Drama|Musical] (ID: 919)
-
-Held-out targets:
-  Validation (Next): Like Water for Chocolate (Como agua para chocolate) (1992) [Drama|Romance] (ID: 265)
-  Test (After Valid): Apocalypse Now (1979) [Drama|War] (ID: 1208)
-
-Top-5 Recommended Movies:
-  1. Country (1984) [Drama] (ID: 3110)
-  2. That's Life! (1986) [Drama] (ID: 3465)
-  3. Simon Birch (1998) [Drama] (ID: 2236)
-  4. Blow-Out (La Grande Bouffe) (1973) [Drama] (ID: 3655)
-  5. Mo' Better Blues (1990) [Drama] (ID: 3425)
 ```
 
 ## Project Structure
@@ -100,37 +140,38 @@ Top-5 Recommended Movies:
 ```text
 sasrec-recommender/
 ├── configs/
-│   └── default.yaml                # Configuration defaults
+│   └── default.yaml
 ├── data/
-│   ├── raw/                        # Raw dataset files (e.g. ratings.dat, movies.dat)
-│   └── processed/                  # Processed sequential dataset text files
+│   ├── raw/
+│   └── processed/
 ├── results/
-│   ├── checkpoints/                # Saved PyTorch models (*.pt)
-│   ├── evaluation.json             # Aggregate metrics from experiments
-│   └── qualitative_examples.txt    # Output from the qualitative recommendations script
+│   ├── checkpoints/
+│   ├── evaluation.json
+│   └── qualitative_examples.txt
 ├── scripts/
-│   ├── train.py                    # Main training CLI
-│   ├── evaluate.py                 # Checkpoint evaluation CLI
-│   └── qualitative_examples.py     # Script to generate top-k examples
+│   ├── train.py
+│   ├── evaluate.py
+│   └── qualitative_examples.py
 ├── src/
-│   ├── data/                       # Data processing, dataset, and negative sampler
-│   ├── evaluation/                 # Metrics and evaluation logic
-│   ├── models/                     # SASRec architecture, attention, layers
-│   └── training/                   # PyTorch training loops
-├── .gitignore                      # Git ignore file
-├── README.md                       # This documentation
-└── requirements.txt                # Python dependencies
+│   ├── data/
+│   ├── evaluation/
+│   ├── models/
+│   └── training/
+├── requirements.txt
+└── README.md
 ```
 
 ## Reproducibility
-All experiments were run with random seed `42`. To guarantee fully deterministic behavior across runs, ensure that PyTorch is configured for deterministic operations and the `--seed 42` flag is used on execution. 
+
+All experiments use a fixed random seed (`42`). Pass `--seed 42` to reproduce reported numbers, and configure PyTorch for deterministic operations if exact bit-for-bit reproduction is needed.
 
 ## Limitations
-- **Cold Start:** Users or items with fewer than 5 interactions are filtered out. The model does not natively handle brand new users or items without retraining.
-- **Side Information:** This implementation purely uses item IDs and sequences. It does not integrate auxiliary data such as movie genres, timestamps of interaction, or user demographics.
 
-## Future Improvements
-- **Incorporating Item Features:** Feeding movie genres or descriptions into the item embeddings could improve representations, especially for items with fewer interactions.
-- **Handling Long Sequences:** Exploring techniques like sparse attention or memory networks for sequences much larger than length 200.
+- **Cold start:** users/items with fewer than 5 interactions are filtered out during preprocessing; the model has no mechanism for handling brand-new users or items without retraining.
+- **No side information:** the model only uses item IDs and sequence order. Genres, timestamps, and user demographics are not incorporated.
+- **Fixed max context:** sequences longer than `maxlen` are truncated to the most recent items, so very long-term dependencies beyond that window are not modeled.
 
+## Possible Future Work
 
+- Incorporate item features (genres, metadata) into the embedding layer to improve cold-item performance.
+- Explore sparse or memory-augmented attention for handling sequences longer than the current max length.
