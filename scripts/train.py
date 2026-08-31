@@ -60,8 +60,8 @@ def parse_args():
     parser.add_argument("--max-batches", type=int, default=None,
                         help="Limit each epoch to this many batches. Omit for full training.")
     parser.add_argument("--checkpoint-path", type=str,
-                        default=os.path.join(project_root, "results", "checkpoints", "sasrec_movielens.pt"),
-                        help="Path to save the model checkpoint.")
+                        default=None,
+                        help="Path to save the model checkpoint. Defaults to dynamic name based on configuration.")
 
     return parser.parse_args()
 
@@ -69,6 +69,16 @@ def parse_args():
 def main():
     args = parse_args()
     set_seeds(args.seed)
+
+    # ---- Resolve dynamic checkpoint path ----
+    checkpoint_path = args.checkpoint_path
+    if checkpoint_path is None:
+        if args.maxlen == 50 and args.dropout == 0.5:
+            checkpoint_filename = "sasrec_movielens_baseline.pt"
+        else:
+            dropout_str = str(args.dropout).replace('.', '')
+            checkpoint_filename = f"sasrec_movielens_maxlen{args.maxlen}_dropout{dropout_str}.pt"
+        checkpoint_path = os.path.join(project_root, "results", "checkpoints", checkpoint_filename)
 
     # ---- Device selection ----
     if args.device is None:
@@ -116,7 +126,7 @@ def main():
     print(f"  Seed:         {args.seed}")
     if is_dev_run:
         print(f"  Max batches:  {args.max_batches}  (dev run)")
-    print(f"  Checkpoint:   {args.checkpoint_path}")
+    print(f"  Checkpoint:   {checkpoint_path}")
     print()
 
     # ---- DataLoader ----
@@ -169,7 +179,7 @@ def main():
         print(f"Epoch {epoch:3d}/{args.epochs}  |  Loss: {avg_loss:.4f}  |  Elapsed: {elapsed:.1f}s")
 
     # ---- Save checkpoint ----
-    os.makedirs(os.path.dirname(args.checkpoint_path), exist_ok=True)
+    os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
 
     checkpoint = {
         # Weights
@@ -185,8 +195,8 @@ def main():
         "num_heads": args.num_heads,
         "dropout_rate": args.dropout,
     }
-    torch.save(checkpoint, args.checkpoint_path)
-    print(f"\nCheckpoint saved to: {args.checkpoint_path}")
+    torch.save(checkpoint, checkpoint_path)
+    print(f"\nCheckpoint saved to: {checkpoint_path}")
     print("==============================================")
 
 
