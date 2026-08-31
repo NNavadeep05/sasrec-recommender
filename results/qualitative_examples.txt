@@ -1,0 +1,131 @@
+﻿Loading datasets and mappings...
+
+==========================================
+User ID: 1
+==========================================
+Recent Watch History (last 10 items):
+  - Schindler's List (1993) [Drama|War] (ID: 527)
+  - Beauty and the Beast (1991) [Animation|Children's|Musical] (ID: 595)
+  - Tarzan (1999) [Animation|Children's] (ID: 2687)
+  - Close Shave, A (1995) [Animation|Comedy|Thriller] (ID: 745)
+  - Aladdin (1992) [Animation|Children's|Comedy|Musical] (ID: 588)
+  - Toy Story (1995) [Animation|Children's|Comedy] (ID: 1)
+  - Bug's Life, A (1998) [Animation|Children's|Comedy] (ID: 2355)
+  - Antz (1998) [Animation|Children's] (ID: 2294)
+  - Hunchback of Notre Dame, The (1996) [Animation|Children's|Musical] (ID: 783)
+  - Hercules (1997) [Adventure|Animation|Children's|Comedy|Musical] (ID: 1566)
+
+Held-out targets:
+  Validation (Next): Mulan (1998) [Animation|Children's] (ID: 1907)
+  Test (After Valid): Pocahontas (1995) [Animation|Children's|Musical|Romance] (ID: 48)
+
+Top-5 Recommended Movies:
+  1. Never Cry Wolf (1983) [Drama] (ID: 3347)
+  2. It Could Happen to You (1994) [Drama|Romance] (ID: 361)
+  3. Six-String Samurai (1998) [Action|Adventure|Sci-Fi] (ID: 2275)
+  4. Adrenalin: Fear the Rush (1996) [Action|Sci-Fi] (ID: 1383)
+  5. Trigger Effect, The (1996) [Drama|Thriller] (ID: 882)
+
+==========================================
+User ID: 10
+==========================================
+Recent Watch History (last 10 items):
+  - Lost in Space (1998) [Action|Sci-Fi|Thriller] (ID: 1831)
+  - Battlefield Earth (2000) [Action|Sci-Fi] (ID: 3593)
+  - Mixed Nuts (1994) [Comedy] (ID: 275)
+  - Robin Hood (1973) [Animation|Children's] (ID: 3034)
+  - Good Earth, The (1937) [Drama] (ID: 3447)
+  - Beauty and the Beast (1991) [Animation|Children's|Musical] (ID: 595)
+  - Citizen Kane (1941) [Drama] (ID: 923)
+  - Good Will Hunting (1997) [Drama] (ID: 1704)
+  - High Noon (1952) [Western] (ID: 1283)
+  - Trekkies (1997) [Documentary] (ID: 2693)
+
+Held-out targets:
+  Validation (Next): Godfather: Part II, The (1974) [Action|Crime|Drama] (ID: 1221)
+  Test (After Valid): Hero (1992) [Comedy|Drama] (ID: 2252)
+
+Top-5 Recommended Movies:
+  1. Commitments, The (1991) [Comedy|Drama] (ID: 3060)
+  2. Addams Family Values (1993) [Comedy] (ID: 410)
+  3. American Dream (1990) [Documentary] (ID: 1169)
+  4. Castle, The (1997) [Comedy] (ID: 2618)
+  5. Go West (1925) [Comedy] (ID: 3133)
+
+==========================================
+User ID: 50
+==========================================
+Recent Watch History (last 10 items):
+  - Anna and the King (1999) [Drama|Romance] (ID: 3155)
+  - Return to Me (2000) [Drama|Romance] (ID: 3512)
+  - Legends of the Fall (1994) [Drama|Romance|War|Western] (ID: 266)
+  - Jurassic Park (1993) [Action|Adventure|Sci-Fi] (ID: 480)
+  - Brothers McMullen, The (1995) [Comedy] (ID: 144)
+  - Gladiator (2000) [Action|Drama] (ID: 3578)
+  - Perfect Storm, The (2000) [Action|Adventure|Thriller] (ID: 3755)
+  - Doctor Dolittle (1967) [Adventure|Musical] (ID: 2135)
+  - She's the One (1996) [Comedy|Romance] (ID: 804)
+  - Replacements, The (2000) [Comedy] (ID: 3861)
+
+Held-out targets:
+  Validation (Next): Class (1983) [Comedy] (ID: 2241)
+  Test (After Valid): Lost World: Jurassic Park, The (1997) [Action|Adventure|Sci-Fi|Thriller] (ID: 1544)
+
+Top-5 Recommended Movies:
+  1. Miss Julie (1999) [Drama] (ID: 3116)
+  2. Get Carter (1971) [Thriller] (ID: 3947)
+  3. H.O.T.S. (1979) [Comedy] (ID: 3804)
+  4. Mickey Blue Eyes (1999) [Comedy|Romance] (ID: 2805)
+  5. Ronin (1998) [Action|Crime|Thriller] (ID: 2278)
+
+==========================================
+User ID: 100
+==========================================
+Recent Watch History (last 10 items):
+  - Cutthroat Island (1995) [Action|Adventure|Romance] (ID: 15)
+  - Batman & Robin (1997) [Action|Adventure|Crime] (ID: 1562)
+  - Anaconda (1997) [Action|Adventure|Thriller] (ID: 1499)
+  - Silence of the Lambs, The (1991) [Drama|Thriller] (ID: 593)
+  - Shawshank Redemption, The (1994) [Drama] (ID: 318)
+  - Schindler's List (1993) [Drama|War] (ID: 527)
+  - 2001: A Space Odyssey (1968) [Drama|Mystery|Sci-Fi|Thriller] (ID: 924)
+  - Fargo (1996) [Crime|Drama|Thriller] (ID: 608)
+  - GoodFellas (1990) [Crime|Drama] (ID: 1213)
+  - Wizard of Oz, The (1939) [Adventure|Children's|Drama|Musical] (ID: 919)
+
+Held-out targets:
+  Validation (Next): Like Water for Chocolate (Como agua para chocolate) (1992) [Drama|Romance] (ID: 265)
+  Test (After Valid): Apocalypse Now (1979) [Drama|War] (ID: 1208)
+
+Top-5 Recommended Movies:
+  1. Country (1984) [Drama] (ID: 3110)
+  2. That's Life! (1986) [Drama] (ID: 3465)
+  3. Simon Birch (1998) [Drama] (ID: 2236)
+  4. Blow-Out (La Grande Bouffe) (1973) [Drama] (ID: 3655)
+  5. Mo' Better Blues (1990) [Drama] (ID: 3425)
+
+==========================================
+User ID: 500
+==========================================
+Recent Watch History (last 10 items):
+  - Little Princess, A (1995) [Children's|Drama] (ID: 262)
+  - Babe (1995) [Children's|Comedy|Drama] (ID: 34)
+  - Secret Garden, The (1993) [Children's|Drama] (ID: 531)
+  - Hocus Pocus (1993) [Children's|Comedy] (ID: 2052)
+  - Muppets From Space (1999) [Children's|Comedy] (ID: 2709)
+  - Flight of the Navigator (1986) [Adventure|Children's|Sci-Fi] (ID: 2046)
+  - FairyTale: A True Story (1997) [Children's|Drama|Fantasy] (ID: 1654)
+  - NeverEnding Story II: The Next Chapter, The (1990) [Adventure|Children's|Fantasy] (ID: 2162)
+  - NeverEnding Story III, The (1994) [Adventure|Children's|Fantasy] (ID: 126)
+  - Super Mario Bros. (1993) [Action|Adventure|Children's|Sci-Fi] (ID: 546)
+
+Held-out targets:
+  Validation (Next): Meet the Parents (2000) [Comedy] (ID: 3948)
+  Test (After Valid): Smilla's Sense of Snow (1997) [Action|Drama|Thriller] (ID: 1480)
+
+Top-5 Recommended Movies:
+  1. Trainspotting (1996) [Drama] (ID: 778)
+  2. Substitute, The (1996) [Action] (ID: 694)
+  3. Lost Highway (1997) [Mystery] (ID: 1464)
+  4. Ice Storm, The (1997) [Drama] (ID: 1635)
+  5. Great Mouse Detective, The (1986) [Animation|Children's] (ID: 2048)
