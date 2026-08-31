@@ -22,7 +22,7 @@ flowchart LR
     B --> C[Sequential Dataset]
     C --> D[Train / Val / Test Split]
     D --> E[SASRec Training]
-    E --> F[Evaluation<br/>HR@10 / NDCG@10]
+    E --> F["Evaluation (HR@10 / NDCG@10)"]
     E --> G[Qualitative Recommendations]
     F --> H[Best Checkpoint]
     G --> H
@@ -40,19 +40,19 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    A[Input Sequence<br/>item_1 ... item_n] --> B[Item Embedding]
+    A["Input Sequence (item_1 ... item_n)"] --> B[Item Embedding]
     A --> C[Positional Embedding]
     B --> D[+]
     C --> D
     D --> E[Self-Attention Block x2]
     subgraph E [Self-Attention Block]
         direction TB
-        E1[Multi-Head Self-Attention<br/>causal mask] --> E2[Add & Norm]
+        E1["Multi-Head Self-Attention (causal mask)"] --> E2[Add & Norm]
         E2 --> E3[Feed-Forward Network]
         E3 --> E4[Add & Norm]
     end
     E --> F[Final Sequence Representation]
-    F --> G[Score Against All Items<br/>dot product]
+    F --> G["Score Against All Items (dot product)"]
     G --> H[Top-K Recommendations]
 ```
 
