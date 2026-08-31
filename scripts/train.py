@@ -160,6 +160,7 @@ def main():
     # ---- Training loop ----
     print("Starting training...\n")
     t_start = time.time()
+    loss_history = []
 
     for epoch in range(1, args.epochs + 1):
         model.train()
@@ -175,6 +176,7 @@ def main():
             batches_run += 1
 
         avg_loss = epoch_loss / batches_run if batches_run > 0 else float("nan")
+        loss_history.append(avg_loss)
         elapsed = time.time() - t_start
         print(f"Epoch {epoch:3d}/{args.epochs}  |  Loss: {avg_loss:.4f}  |  Elapsed: {elapsed:.1f}s")
 
@@ -187,6 +189,7 @@ def main():
         "optimizer_state_dict": trainer.optimizer.state_dict(),
         # Training state
         "epoch": args.epochs,
+        "loss_history": loss_history,
         # Architecture config (needed by evaluate.py to reconstruct the model)
         "item_count": item_count,
         "maxlen": args.maxlen,
