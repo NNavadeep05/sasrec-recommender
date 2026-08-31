@@ -1,6 +1,10 @@
 import os
 import sys
+import argparse
+import random
+import time
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 
 # Add project root to sys.path to guarantee import safety from any directory
@@ -13,141 +17,177 @@ from src.models.sasrec import SASRec
 from src.training.trainer import SASRecDataset, SASRecTrainer
 
 
-def main():
-    print("====================================================")
-    print("Starting SASRec End-to-End Real-Data Sanity Training")
-    print("====================================================\n")
+def set_seeds(seed: int = 42):
+    """Set random seeds for reproducibility where possible.
+    
+    Note: SASRec negative sampling is CPU-based random and may differ run-to-run
+    even with the same seed unless DataLoader worker seeds are also fixed.
+    GPU operations can introduce additional nondeterminism.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
-    # 1. Path setup
-    dataset_path = os.path.join(project_root, "data", "processed", "ml-1m.txt")
-    if not os.path.exists(dataset_path):
-        print(f"Error: Processed dataset not found at {dataset_path}")
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train a SASRec sequential recommender on MovieLens-1M.")
+
+    parser.add_argument("--data", type=str,
+                        default=os.path.join(project_root, "data", "processed", "ml-1m.txt"),
+                        help="Path to the processed interaction data file.")
+    parser.add_argument("--epochs", type=int, default=200,
+                        help="Number of training epochs (default: 200).")
+    parser.add_argument("--batch-size", type=int, default=128,
+                        help="Number of users per training batch (default: 128).")
+    parser.add_argument("--maxlen", type=int, default=50,
+                        help="Sequence context length (default: 50).")
+    parser.add_argument("--hidden-units", type=int, default=50,
+                        help="Hidden dimensionality of the model (default: 50).")
+    parser.add_argument("--num-blocks", type=int, default=2,
+                        help="Number of self-attention blocks (default: 2).")
+    parser.add_argument("--num-heads", type=int, default=1,
+                        help="Number of attention heads (default: 1).")
+    parser.add_argument("--dropout", type=float, default=0.5,
+                        help="Dropout probability (default: 0.5).")
+    parser.add_argument("--lr", type=float, default=0.001,
+                        help="Adam learning rate (default: 0.001).")
+    parser.add_argument("--device", type=str, default=None,
+                        help="Device to train on: 'cpu' or 'cuda'. Defaults to cuda if available.")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed (default: 42).")
+    parser.add_argument("--max-batches", type=int, default=None,
+                        help="Limit each epoch to this many batches. Omit for full training.")
+    parser.add_argument("--checkpoint-path", type=str,
+                        default=os.path.join(project_root, "results", "checkpoints", "sasrec_movielens.pt"),
+                        help="Path to save the model checkpoint.")
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    set_seeds(args.seed)
+
+    # ---- Device selection ----
+    if args.device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(args.device)
+        if device.type == "cuda" and not torch.cuda.is_available():
+            print("Error: --device cuda was requested but CUDA is not available.")
+            sys.exit(1)
+
+    is_dev_run = args.max_batches is not None
+
+    # ---- Header ----
+    print("==============================================")
+    if is_dev_run:
+        print("SASRec Training  [DEVELOPMENT / SANITY RUN]")
+    else:
+        print("SASRec Training  [FULL RUN]")
+    print("==============================================\n")
+
+    # ---- Load dataset ----
+    if not os.path.exists(args.data):
+        print(f"Error: Processed dataset not found at: {args.data}")
         sys.exit(1)
 
-    # 2. Load dataset
-    print(f"Loading dataset from: {dataset_path}")
-    dataset = load_dataset(dataset_path)
+    print(f"Loading dataset from: {args.data}")
+    dataset = load_dataset(args.data)
     user_train = dataset["train"]
-    user_count = dataset["user_count"]
     item_count = dataset["item_count"]
-    
-    print(f"Dataset Loaded Successfully:")
-    print(f"  - Users count (in train): {len(user_train)}")
-    print(f"  - Total User IDs: {user_count}")
-    print(f"  - Total Item IDs: {item_count}")
-    print(f"  - Total Interactions loaded: {len(user_train)}")
-    print("-" * 52)
+    print(f"  Users: {dataset['user_count']}  |  Items: {item_count}\n")
 
-    # 3. Setup configurations
-    maxlen = 50
-    hidden_units = 50
-    num_blocks = 2
-    num_heads = 1
-    dropout_rate = 0.5
-    learning_rate = 0.001
-    batch_size = 128
+    # ---- Print configuration ----
+    print("Training configuration")
+    print("----------------------")
+    print(f"  Dataset:      {args.data}")
+    print(f"  Device:       {device}")
+    print(f"  Epochs:       {args.epochs}")
+    print(f"  Batch size:   {args.batch_size}")
+    print(f"  Maxlen:       {args.maxlen}")
+    print(f"  Hidden units: {args.hidden_units}")
+    print(f"  Blocks:       {args.num_blocks}")
+    print(f"  Heads:        {args.num_heads}")
+    print(f"  Dropout:      {args.dropout}")
+    print(f"  Learning rate:{args.lr}")
+    print(f"  Seed:         {args.seed}")
+    if is_dev_run:
+        print(f"  Max batches:  {args.max_batches}  (dev run)")
+    print(f"  Checkpoint:   {args.checkpoint_path}")
+    print()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Configuration:")
-    print(f"  - maxlen: {maxlen}")
-    print(f"  - hidden_units: {hidden_units}")
-    print(f"  - num_blocks: {num_blocks}")
-    print(f"  - num_heads: {num_heads}")
-    print(f"  - dropout_rate: {dropout_rate}")
-    print(f"  - learning_rate: {learning_rate}")
-    print(f"  - batch_size: {batch_size}")
-    print(f"  - device: {device}")
-    print("-" * 52)
-
-    # 4. Instantiate PyTorch Dataset and DataLoader
-    # SASRecDataset dynamically calls create_training_sample on-the-fly, keeping memory usage constant.
-    train_dataset = SASRecDataset(user_train, item_count, maxlen)
+    # ---- DataLoader ----
+    train_dataset = SASRecDataset(user_train, item_count, args.maxlen)
     train_loader = DataLoader(
-        train_dataset, 
-        batch_size=batch_size, 
-        shuffle=True, 
-        num_workers=0
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=0        # keep simple; avoids multiprocess issues on Windows
     )
-    
-    print(f"Data Loader Setup:")
-    print(f"  - Total Batches per Epoch: {len(train_loader)}")
-    print("-" * 52)
+    total_batches = len(train_loader)
+    print(f"Batches per epoch: {total_batches}")
+    if is_dev_run:
+        print(f"Running first {args.max_batches} batches per epoch (dev mode).\n")
 
-    # 5. Instantiate Model and Trainer
+    # ---- Model & Trainer ----
     model = SASRec(
         item_count=item_count,
-        maxlen=maxlen,
-        hidden_units=hidden_units,
-        num_blocks=num_blocks,
-        num_heads=num_heads,
-        dropout_rate=dropout_rate
+        maxlen=args.maxlen,
+        hidden_units=args.hidden_units,
+        num_blocks=args.num_blocks,
+        num_heads=args.num_heads,
+        dropout_rate=args.dropout
     )
-    
-    trainer = SASRecTrainer(model=model, lr=learning_rate, device=device)
-    print("Model and Trainer successfully instantiated.")
-    print("-" * 52)
+    trainer = SASRecTrainer(model=model, lr=args.lr, device=str(device))
 
-    # 6. Sanity check parameters before optimization
-    initial_weights = model.item_emb.weight.clone().detach()
+    if device.type == "cuda":
+        gpu_name = torch.cuda.get_device_name(0)
+        print(f"GPU: {gpu_name}\n")
 
-    # 7. Run a short sanity training loop
-    print("Running short training sanity check (first 20 batches)...")
-    model.train()
-    
-    total_loss = 0.0
-    num_batches_to_run = 20
-    
-    for batch_idx, batch in enumerate(train_loader):
-        if batch_idx >= num_batches_to_run:
-            break
-            
-        loss = trainer.train_step(batch)
-        total_loss += loss
-        
-        # Verify gradients are produced
-        has_grad = model.item_emb.weight.grad is not None
-        grad_status = "Grad: Yes" if has_grad else "Grad: No"
-        
-        print(f"Batch {batch_idx + 1}/{num_batches_to_run} - Loss: {loss:.4f} | {grad_status}")
+    # ---- Training loop ----
+    print("Starting training...\n")
+    t_start = time.time()
 
-    # 8. Post-training checks
-    avg_loss = total_loss / num_batches_to_run
-    print("-" * 52)
-    print("Sanity Run Complete:")
-    print(f"  - Average Loss: {avg_loss:.4f}")
-    
-    # Check weight updates
-    final_weights = model.item_emb.weight.clone().detach()
-    weights_changed = not torch.allclose(initial_weights, final_weights)
-    print(f"  - Weights updated by optimizer: {weights_changed}")
-    
-    # Check for NaN / Inf in model parameters
-    nan_occurred = torch.isnan(model.item_emb.weight).any().item()
-    print(f"  - NaN values in parameters: {nan_occurred}")
+    for epoch in range(1, args.epochs + 1):
+        model.train()
+        epoch_loss = 0.0
+        batches_run = 0
 
-    # 9. Verify if weights changed & loss is valid
-    if weights_changed and not nan_occurred and avg_loss > 0:
-         print("\n>>> PIPELINE INTEGRATION SANITY CHECK: PASSED! <<<")
-         
-         # Save checkpoint
-         checkpoint_dir = os.path.join(project_root, "results", "checkpoints")
-         os.makedirs(checkpoint_dir, exist_ok=True)
-         checkpoint_path = os.path.join(checkpoint_dir, "sasrec_movielens.pt")
-         
-         checkpoint = {
-             "model_state_dict": model.state_dict(),
-             "item_count": item_count,
-             "maxlen": maxlen,
-             "hidden_units": hidden_units,
-             "num_blocks": num_blocks,
-             "num_heads": num_heads,
-             "dropout_rate": dropout_rate
-         }
-         torch.save(checkpoint, checkpoint_path)
-         print(f"Saved checkpoint to: {checkpoint_path}")
-    else:
-         print("\n>>> PIPELINE INTEGRATION SANITY CHECK: FAILED! <<<")
-    print("====================================================")
+        for batch_idx, batch in enumerate(train_loader):
+            if is_dev_run and batch_idx >= args.max_batches:
+                break
+
+            loss = trainer.train_step(batch)
+            epoch_loss += loss
+            batches_run += 1
+
+        avg_loss = epoch_loss / batches_run if batches_run > 0 else float("nan")
+        elapsed = time.time() - t_start
+        print(f"Epoch {epoch:3d}/{args.epochs}  |  Loss: {avg_loss:.4f}  |  Elapsed: {elapsed:.1f}s")
+
+    # ---- Save checkpoint ----
+    os.makedirs(os.path.dirname(args.checkpoint_path), exist_ok=True)
+
+    checkpoint = {
+        # Weights
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": trainer.optimizer.state_dict(),
+        # Training state
+        "epoch": args.epochs,
+        # Architecture config (needed by evaluate.py to reconstruct the model)
+        "item_count": item_count,
+        "maxlen": args.maxlen,
+        "hidden_units": args.hidden_units,
+        "num_blocks": args.num_blocks,
+        "num_heads": args.num_heads,
+        "dropout_rate": args.dropout,
+    }
+    torch.save(checkpoint, args.checkpoint_path)
+    print(f"\nCheckpoint saved to: {args.checkpoint_path}")
+    print("==============================================")
 
 
 if __name__ == "__main__":
