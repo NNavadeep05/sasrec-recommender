@@ -1,12 +1,31 @@
 {
+    "experiment": "sasrec_movielens_full",
+    "dataset": "MovieLens-1M",
+    "users": 6040,
+    "items": 3416,
+    "interactions": 999611,
+    "training": {
+        "epochs": 200,
+        "batch_size": 128,
+        "maxlen": 50,
+        "hidden_units": 50,
+        "num_blocks": 2,
+        "num_heads": 1,
+        "dropout": 0.5,
+        "learning_rate": 0.001,
+        "seed": 42,
+        "device": "cuda",
+        "gpu": "Tesla T4"
+    },
+    "final_training_loss": 0.7458,
     "validation": {
-        "HR@10": 0.08,
-        "NDCG@10": 0.025320249110685974,
-        "users_evaluated": 50
+        "HR@10": 0.6879,
+        "NDCG@10": 0.4277,
+        "users_evaluated": 6040
     },
     "test": {
-        "HR@10": 0.18,
-        "NDCG@10": 0.07218713166643602,
-        "users_evaluated": 50
+        "HR@10": 0.6781,
+        "NDCG@10": 0.4148,
+        "users_evaluated": 6040
     }
 }
