@@ -6,10 +6,6 @@ A PyTorch-based sequential recommendation system that predicts the next item a u
 
 Traditional collaborative filtering models often ignore the order in which users interact with items. Sequential recommenders like this one treat user history as a time-ordered sequence, capturing short-term intent and long-term preferences to predict future interactions more accurately.
 
-## What Does The System Do?
-
-This system processes raw interaction logs (user, item, timestamp), constructs chronological interaction sequences for each user, and trains a Transformer-based model to predict the next item in the sequence. It evaluates performance using rigorous Leave-One-Out (LOO) testing and provides a pipeline to generate qualitative Top-K recommendations for specific users.
-
 ## System Pipeline & Architecture
 
 1. **Data Processing:** Filters out sparse users and items (minimum 5 interactions), remaps IDs to contiguous integers, and chronologically sorts interactions.
@@ -21,7 +17,7 @@ This system processes raw interaction logs (user, item, timestamp), constructs c
 
 The model was trained and evaluated on the **MovieLens-1M** dataset (6,040 users, 3,416 items, 999,611 interactions).
 
-The best performing configuration achieved the following metrics on the test set:
+The best-performing configuration achieved the following metrics on the test set:
 - **Test HR@10:** 0.7371
 - **Test NDCG@10:** 0.4793
 - **Final Training Loss:** 0.6075
@@ -127,7 +123,7 @@ sasrec-recommender/
 ```
 
 ## Reproducibility
-All experiments were run with random seed `42`. To guarantee fully deterministic behavior across runs, ensure that PyTorch is configured for deterministic operations, and the `--seed 42` flag is used on execution. 
+All experiments were run with random seed `42`. To guarantee fully deterministic behavior across runs, ensure that PyTorch is configured for deterministic operations and the `--seed 42` flag is used on execution. 
 
 ## Limitations
 - **Cold Start:** Users or items with fewer than 5 interactions are filtered out. The model does not natively handle brand new users or items without retraining.
@@ -137,5 +133,4 @@ All experiments were run with random seed `42`. To guarantee fully deterministic
 - **Incorporating Item Features:** Feeding movie genres or descriptions into the item embeddings could improve representations, especially for items with fewer interactions.
 - **Handling Long Sequences:** Exploring techniques like sparse attention or memory networks for sequences much larger than length 200.
 
-## Conclusion
-This repository provides a clean, robust, and extensible implementation of a sequential recommender system using PyTorch. Through our experiments, tuning the maximum sequence length and dropout parameters demonstrated a notable lift in ranking metrics, providing a strong baseline for production use cases or further ML systems development.
+
